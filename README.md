@@ -141,13 +141,13 @@ Note this is separate from a set of methods to find any child, teacher, parent, 
     let allMyChildren = aulaClient.GetMyChildren();
 
     //Find any child named Lars (scoped to your institution and profile access)
-    //Results would also include your own, but it's any child in the institution
+    //Results would also include your own if there's a match, but it's any child in the institution
     let otherChildren = aulaClient.FindAnyChildren("Lars"); 
 
     //Write out these children
     otherChildren.forEach(child => {
         console.log(child.name);
-        let parent = child.relatedProfiles[0]; //Parent or such
+        let parent = child.GetParents()[0]; //Parent or such
         console.log(parent.firstName);
     });
 
