@@ -91,7 +91,7 @@ Here is an example of logging in, getting the last 21 days of Posts, and then ge
 ````
 ### Aula Client and Methods
 
-There is a sample integration test using Jest [./tests/defaultIntegration.test.ts] which demonstrates various possibilities and can be used as a reference.
+There is a sample integration test using Jest: [integration tests](/tests/defaultIntegration.test.ts) which demonstrates various possibilities and can be used as a reference.
 
 When logging into Aula, you may have multiple profiles, multiple children, and multiple institutions (schools, etc).  Aula -and therefore this client- only acts in the context of a given profile/child/institution combination.  So, for example, if you have multiple children, you must switch the active child in the client.  There is no "all children" or "all institutions" behavior in this client.
 
