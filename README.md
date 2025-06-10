@@ -17,6 +17,8 @@ Key features:
 - Pulls almost 1:1 all data from Aula, allowing for your own filtering of important information
 - Does not write to Aula, send messages or similar
 
+See the sample [integration tests](/tests/defaultIntegration.test.ts) for a fuller example of the various methods and usage.
+
 Note: The Aula API is currently on version 21 at the time of this writing and this client is written for that version.  If Aula updates (v22+), it is possible the methods will still work, but the data structures may change. Meaning, it probably would still work fine, but potentially could introduce errors if the data objects change.
 
 
@@ -93,7 +95,7 @@ Here is an example of logging in, getting the last 21 days of Posts, and then ge
 
 There is a sample integration test using Jest: [integration tests](/tests/defaultIntegration.test.ts) which demonstrates various possibilities and can be used as a reference.
 
-When logging into Aula, you may have multiple profiles, multiple children, and multiple institutions (schools, etc).  Aula -and therefore this client- only acts in the context of a given profile/child/institution combination.  So, for example, if you have multiple children, you must switch the active child in the client.  There is no "all children" or "all institutions" behavior in this client.
+When logging into Aula, you may have multiple profiles, multiple children, and multiple institutions (schools, etc).  Aula -and therefore this client- only acts in the context of a given profile/child/institution combination.  So, for example, if you have multiple children, you must switch the active child in the client.  There is no native "all children" or "all institutions" behavior in this client.
 
 ````javascript
 
@@ -106,15 +108,23 @@ When logging into Aula, you may have multiple profiles, multiple children, and m
     let events = aulaClient.GetCalendarEvents();
 
     //Find my other child named Billy
-    let allMyChildren = aulaClient.GetChildren();
+    let allMyChildren = aulaClient.GetMyChildren();
     let foundChild = allMyChildren.filter(child => child.name.indexOf("Billy") > -1)[0];
 
     //Set the context of the client to Billy
     let foundChildId = foundChild.id;
-    aulaClient.SetCurrentChild(foundChildId);
+    aulaClient.SetMyCurrentChild(foundChildId);
 
     //This will get the calendar events for the newly set child, Billy
-    let events = aulaClient.GetCalendarEvents();
+    events = aulaClient.GetCalendarEvents();
+
+    //Or say you wanted events for all children... (might be confusing to unpack, but maybe...)
+    events : AulaCalendarEvent[] = [];
+    allMyChildren.forEach(child => {
+        aulaClient.SetMyCurrentChild(child.id);
+        events.push(...aulaClient.GetCalendarEvents(););
+    });
+
 
 ````
 
@@ -125,10 +135,14 @@ Note this is separate from a set of methods to find any child, teacher, parent, 
     await aulaClient.Login(getKnownAulaSessionId, setKnownAulaSessionId);
 
     //The first/default child will be set automatically
+    //This is *your* default child, set at login
     let currentChild = aulaClient.CurrentChild; //Assume "Johnny"
+    //These are all *your* children
+    let allMyChildren = aulaClient.GetMyChildren();
 
     //Find any child named Lars (scoped to your institution and profile access)
-    let otherChildren = aulaClient.FindChildren("Lars"); 
+    //Results would also include your own, but it's any child in the institution
+    let otherChildren = aulaClient.FindAnyChildren("Lars"); 
 
     //Write out these children
     otherChildren.forEach(child => {

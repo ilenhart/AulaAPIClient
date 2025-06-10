@@ -171,14 +171,14 @@ export class AulaAPIClient {
   * @param displayNamePart  - Partial string of the user's name
   * @return The profile
   * */
-  public GetProfile(displayNamePart : string) : Profile | undefined {
+  public GetMyProfile(displayNamePart : string) : Profile | undefined {
     return this.AllProfiles.GetProfileByDisplayName(displayNamePart);
   }
 
   /*
   * Can set the client to be using a different current profile, if needed
   */
-  public SetCurrentProfile(profileId : number) {
+  public SetMyCurrentProfile(profileId : number) {
     let foundProfile = this.AllProfiles.profiles.find(profile => profile.profileId === profileId);
     if (foundProfile) this.CurrentProfile = foundProfile;
   }
@@ -186,21 +186,21 @@ export class AulaAPIClient {
   /*
   * Gets a specific child, using a string partial of their name
   */
-  public GetChild(childNamePart : string) : Child | undefined {
+  public GetMyChild(childNamePart : string) : Child | undefined {
     return this.CurrentProfile.GetChildByName(childNamePart);
   }
 
    /*
   * Get all children
   */
-   public GetChildren() : Child[]  {
+   public GetMyChildren() : Child[]  {
     return this.CurrentProfile.GetChildren();
   }
 
   /*
   * Can set the client to be using a different current child, if needed
   */
-  public SetCurrentChild(childId : number) {
+  public SetMyCurrentChild(childId : number) {
     let foundChild = this.AllChildren.find(child => child.id === childId);
     if (foundChild) this.CurrentChild = foundChild;
   }
@@ -208,14 +208,14 @@ export class AulaAPIClient {
   /*
   * Gets the institution, using a string partial of the institution name
   */
-  public GetInstitution(institutionNamePart : string) : InstitutionProfile | undefined {
+  public GetMyInstitution(institutionNamePart : string) : InstitutionProfile | undefined {
     return this.CurrentProfile.GetInstitutionByName(institutionNamePart);
   }
 
   /*
   * Can set the client to be using a different current institution, if needed
   */
-  public SetCurrentInstitution(institutionId : number) {
+  public SetMyCurrentInstitution(institutionId : number) {
     let foundInstitution = this.AllInstitutions.find(institution => institution.id === institutionId);
     if (foundInstitution) this.CurrentInstitution = foundInstitution;
   }
@@ -240,7 +240,7 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-  public async FindPeople(namePart : string) : Promise<AulaRecipient[]> {
+  public async FindAnyPeople(namePart : string) : Promise<AulaRecipient[]> {
     return await this.findAulaMailboxRecipients(namePart);
   }
 
@@ -249,8 +249,8 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-  public async FindParents(namePart : string) : Promise<AulaRecipient[]> {
-    let results = await this.FindPeople(namePart);
+  public async FindAnyParents(namePart : string) : Promise<AulaRecipient[]> {
+    let results = await this.FindAnyPeople(namePart);
     return results.filter(result => result.portalRole === PortalRole.Parent);
   }
 
@@ -259,8 +259,8 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-  public async FindChildren(namePart : string) : Promise<AulaRecipient[]> {
-    let results = await this.FindPeople(namePart);
+  public async FindAnyChildren(namePart : string) : Promise<AulaRecipient[]> {
+    let results = await this.FindAnyPeople(namePart);
     return results.filter(result => result.portalRole === PortalRole.Child);
   }
 
@@ -269,8 +269,8 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-  public async FindTeachers(namePart : string) : Promise<AulaRecipient[]> {
-    let results = await this.FindPeople(namePart);
+  public async FindAnyTeachers(namePart : string) : Promise<AulaRecipient[]> {
+    let results = await this.FindAnyPeople(namePart);
     return results.filter(result => result.portalRole === PortalRole.Employee && result.institutionRole === InstitutionRole.Teacher);
   }
 
@@ -279,8 +279,8 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-  public async FindPreschoolTeachers(namePart : string) : Promise<AulaRecipient[]> {
-    let results = await this.FindPeople(namePart);
+  public async FindAnyPreschoolTeachers(namePart : string) : Promise<AulaRecipient[]> {
+    let results = await this.FindAnyPeople(namePart);
     return results.filter(result => result.portalRole === PortalRole.Employee && result.institutionRole === InstitutionRole.PreschoolTeacher);
   }
 
@@ -289,8 +289,8 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-   public async FindLeaders(namePart : string) : Promise<AulaRecipient[]> {
-    let results = await this.FindPeople(namePart);
+   public async FindAnyLeaders(namePart : string) : Promise<AulaRecipient[]> {
+    let results = await this.FindAnyPeople(namePart);
     return results.filter(result => result.portalRole === PortalRole.Employee && result.institutionRole === InstitutionRole.Leader);
   }
 
@@ -299,8 +299,8 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-  public async FindEmployees(namePart : string) : Promise<AulaRecipient[]> {
-    let results = await this.FindPeople(namePart);
+  public async FindAnyEmployees(namePart : string) : Promise<AulaRecipient[]> {
+    let results = await this.FindAnyPeople(namePart);
     return results.filter(result => result.portalRole === PortalRole.Employee);
   }
 

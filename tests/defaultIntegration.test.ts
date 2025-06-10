@@ -13,6 +13,9 @@ test('Login Variations', async () => {
 
     const aulaConfig = new AulaClientConfig();
 
+    /*
+        Expects to pull these values from an .env file in the root.  See .env.default as a sample.  Copy it to .env and fill in the values.
+    */
     aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
     aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
     
@@ -77,7 +80,7 @@ test('Full Integration Test', async () => {
     const aulaConfig = new AulaClientConfig();
 
     /*
-        Expects to pull this from an .env file in the root.  See .env.default as a sample.  Copy it to .env and fill in the values.
+        Expects to pull these values from an .env file in the root.  See .env.default as a sample.  Copy it to .env and fill in the values.
     */
     aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
     aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
@@ -129,7 +132,7 @@ test('Full Integration Test', async () => {
     let profileId = profile.profileId;
 
     //Check that we can swap the profile and it is set correctly
-    aulaClient.SetCurrentProfile(profile.profileId);
+    aulaClient.SetMyCurrentProfile(profile.profileId);
     expect(aulaClient.CurrentProfile.profileId).toBe(profileId);
 
     //Check that we have a valid child 
@@ -138,13 +141,13 @@ test('Full Integration Test', async () => {
 
     
     //Check that we can swap the child and is correct after being set
-    aulaClient.SetCurrentChild(foundChild.id);
+    aulaClient.SetMyCurrentChild(foundChild.id);
     expect(aulaClient.CurrentChild.id).toBe(foundChild.id);
 
     let foundInstitution = profile.GetInstitutionByName(process.env.TEST_INSTITUTION_NAME!)!;
     expect(foundInstitution.institutionName.indexOf(process.env.TEST_INSTITUTION_NAME!)).toBeGreaterThan(-1);
 
-    aulaClient.SetCurrentInstitution(foundInstitution.id);
+    aulaClient.SetMyCurrentInstitution(foundInstitution.id);
     expect(aulaClient.CurrentInstitution.id).toBe(foundInstitution.id);
 
     let child = aulaClient.CurrentChild;
@@ -302,12 +305,12 @@ test('Full Integration Test', async () => {
     //Below we have a set of "finding people" methods.  These are useful for finding people by name, and then getting their children, parents, teachers, etc.
 
     //Find people by name (children, parents, teachers, etc)
-    let foundPeople = await aulaClient.FindPeople(process.env.TEST_PARENT_NAME!);
+    let foundPeople = await aulaClient.FindAnyPeople(process.env.TEST_PARENT_NAME!);
     expect(foundPeople.length).toBeGreaterThan(0);
     expect(foundPeople[0].name.indexOf(process.env.TEST_PARENT_NAME!)).toBeGreaterThan(-1);
 
     //Find parents generally by name
-    let foundParents = await aulaClient.FindParents(process.env.TEST_PARENT_NAME!);
+    let foundParents = await aulaClient.FindAnyParents(process.env.TEST_PARENT_NAME!);
     expect(foundParents.length).toBeGreaterThan(0);
     expect(foundParents[0].name.indexOf(process.env.TEST_PARENT_NAME!)).toBeGreaterThan(-1);
 
@@ -316,7 +319,7 @@ test('Full Integration Test', async () => {
     expect(foundChildrenOfParent.length).toBeGreaterThan(0);
 
     //Find children generally by name
-    let foundChildren = await aulaClient.FindChildren(process.env.TEST_CHILD_NAME!);
+    let foundChildren = await aulaClient.FindAnyChildren(process.env.TEST_CHILD_NAME!);
     expect(foundChildren.length).toBeGreaterThan(0);
     expect(foundChildren[0].name.indexOf(process.env.TEST_CHILD_NAME!)).toBeGreaterThan(-1);
 
@@ -329,17 +332,17 @@ test('Full Integration Test', async () => {
     expect(foundTeachersOfChild.length).toBeGreaterThan(0);
 
     //Find teachers in general by name
-    let foundTeachers = await aulaClient.FindTeachers(process.env.TEST_TEACHER_NAME!);
+    let foundTeachers = await aulaClient.FindAnyTeachers(process.env.TEST_TEACHER_NAME!);
     expect(foundTeachers.length).toBeGreaterThan(0);
     expect(foundTeachers[0].name.indexOf(process.env.TEST_TEACHER_NAME!)).toBeGreaterThan(-1);
 
     //Find preschool teachers (SFO) in general by name
-    let foundPreschoolTeachers = await aulaClient.FindPreschoolTeachers(process.env.TEST_PRESCHOOL_TEACHER_NAME!);
+    let foundPreschoolTeachers = await aulaClient.FindAnyPreschoolTeachers(process.env.TEST_PRESCHOOL_TEACHER_NAME!);
     expect(foundPreschoolTeachers.length).toBeGreaterThan(0);
     expect(foundPreschoolTeachers[0].name.indexOf(process.env.TEST_PRESCHOOL_TEACHER_NAME!)).toBeGreaterThan(-1);
 
     //Find leaders in general by name
-    let foundLeaders = await aulaClient.FindLeaders(process.env.TEST_LEADER_NAME!);
+    let foundLeaders = await aulaClient.FindAnyLeaders(process.env.TEST_LEADER_NAME!);
     expect(foundLeaders.length).toBeGreaterThan(0);
     expect(foundLeaders[0].name.indexOf(process.env.TEST_LEADER_NAME!)).toBeGreaterThan(-1);
     
