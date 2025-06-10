@@ -76,6 +76,9 @@ test('Full Integration Test', async () => {
     
     const aulaConfig = new AulaClientConfig();
 
+    /*
+        Expects to pull this from an .env file in the root.  See .env.default as a sample.  Copy it to .env and fill in the values.
+    */
     aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
     aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
     
