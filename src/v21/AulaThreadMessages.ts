@@ -1,5 +1,6 @@
 import { Attachment, FileAttachment, ImageAttachment } from "./AulaAttachment";
 import {  AulaJsonResponseDataWrapper } from "./AulaCommon";
+import { PortalRole } from "./AulaRecipients";
 
 
 export class AulaMailBoxOwner {
@@ -111,6 +112,39 @@ export class AulaGetMessagesForThread {
     isArchived: boolean;
     mailBoxOwner: AulaMailBoxOwner;
     institutionCode: string;
+
+    //Judgement call here. Normal threads might be hundreds of receipients.
+    //Arguably, if the thread only contains a few people, it is more relevant (i.e. not a "broadcast", but meant for specific persons);
+    //We assume here "few people" = 10 or less people
+    public IsSentToFewPeople() : boolean {
+        return this.IsSentToFewerPeopleThan(10);
+    }
+
+    public IsSentToFewerPeopleThan(count: number) : boolean {
+        return this.recipients.length < count;
+    }
+
+    public GetParentRecipients() : AulaSender[] {
+        return this.recipients.filter(r => {
+            let portalRole = r.mailBoxOwner.portalRole;
+            return portalRole === PortalRole.Parent
+        })
+    }
+
+    public GetChildRecipients() : AulaSender[] {
+        return this.recipients.filter(r => {
+            let portalRole = r.mailBoxOwner.portalRole;
+            return portalRole === PortalRole.Child
+        })
+    }
+
+    public GetEmployeeRecipients() : AulaSender[] {
+        return this.recipients.filter(r => {
+            let portalRole = r.mailBoxOwner.portalRole;
+            return portalRole === PortalRole.Employee
+        })
+    }
+
 
     public AnyMessageHasAttachments() : boolean {
         return this.messages.some(m => m.hasAttachments);

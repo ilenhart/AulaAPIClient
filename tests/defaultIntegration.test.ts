@@ -1,4 +1,4 @@
-import { AulaClient, AulaClientConfig } from "../src";
+import { AulaAPIClient, AulaClientConfig } from "../src";
 import { AulaPost } from "../src/v21/AulaPosts";
 
 require('dotenv').config();
@@ -18,7 +18,7 @@ test('Login Variations', async () => {
     
 
     //Login with no sessionId
-    let aulaClient = new AulaClient(aulaConfig);
+    let aulaClient = new AulaAPIClient(aulaConfig);
     await aulaClient.Login();
     expect(aulaClient.LoggedIn).toBe(true);
     let knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
@@ -26,37 +26,33 @@ test('Login Variations', async () => {
     expect(knownSessionId).toBeDefined();
 
 
-
     //Login with a known and valid sessionId
     let getKnownAulaSessionId = async (): Promise<string> => {
         return knownSessionId;
     };
-    aulaClient = new AulaClient(aulaConfig);
+    aulaClient = new AulaAPIClient(aulaConfig);
     await aulaClient.Login(getKnownAulaSessionId, setKnownAulaSessionId);
     expect(aulaClient.LoggedIn).toBe(true);
     knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
     expect(knownSessionId).toBeDefined();
 
 
-
     //Login with an invalid sessionID (should recover and login anyway)
     let getInvalidAulaSessionId = async (): Promise<string> => {
         return "INVALID_SESSION_ID";
     };
-    aulaClient = new AulaClient(aulaConfig);
+    aulaClient = new AulaAPIClient(aulaConfig);
     await aulaClient.Login(getInvalidAulaSessionId, setKnownAulaSessionId);
     expect(aulaClient.LoggedIn).toBe(true);
     knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
     expect(knownSessionId).toBeDefined();
 
 
-
-
     //Login with a blank sessionId (should recover and login anyway)
     let getBlankAulaSessionId = async (): Promise<string> => {
         return "";
     };
-    aulaClient = new AulaClient(aulaConfig);
+    aulaClient = new AulaAPIClient(aulaConfig);
     await aulaClient.Login(getBlankAulaSessionId, setKnownAulaSessionId);
     expect(aulaClient.LoggedIn).toBe(true);
     knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
@@ -67,7 +63,7 @@ test('Login Variations', async () => {
     let getValidAulaSessionId = async (): Promise<string> => {
         return validSessionId;
     };
-    aulaClient = new AulaClient(aulaConfig);
+    aulaClient = new AulaAPIClient(aulaConfig);
     await aulaClient.Login(getValidAulaSessionId, setKnownAulaSessionId);
     expect(aulaClient.LoggedIn).toBe(true);
     knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
@@ -83,7 +79,7 @@ test('Full Integration Test', async () => {
     aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
     aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
     
-    let aulaClient = new AulaClient(aulaConfig);
+    let aulaClient = new AulaAPIClient(aulaConfig);
 
     let usedGetSessionId = false;
     let usedSetSessionId = false;
@@ -92,7 +88,7 @@ test('Full Integration Test', async () => {
     //Sessions expire after 60(?) minutes, so also need a ttl or invalidation.
     //In the code, if a session doesn't work, it should recover and try anyway
     let getKnownAulaSessionId = async (): Promise<string> => {
-        console.log("Get a valid logic session from a cache, if present.");
+        console.log("Get a valid session ID from a cache, if present.");
         usedGetSessionId = true;
         if (process.env.KNOWN_AULA_SESSION_ID && process.env.KNOWN_AULA_SESSION_ID !== "" ) {
             return process.env.KNOWN_AULA_SESSION_ID;
@@ -191,7 +187,7 @@ test('Full Integration Test', async () => {
 
     //Expect some kind of event to be present
     expect(calendarEvents.length).toBeGreaterThan(0);
-    
+
     //Expect that the sum of the lessons and the other non-lessons is the total number of events
     expect(calendarEventsOnlyLessons.length + calendarEventsExceptLessons.length).toBe(calendarEvents.length);
     
@@ -200,7 +196,19 @@ test('Full Integration Test', async () => {
     let MESSAGES_RETRIEVE_PAST_DAYS = 21;
     let threads = await aulaClient.GetAulaThreads(MESSAGES_RETRIEVE_PAST_DAYS);
     
-    //Deep examination of the attachment pulling logic, as getting pictures and files is key
+    //Check we can pull a single thread in isolation if we had an Id
+    let firstThread = await aulaClient.GetAulaThreadSingle(threads[0].id.toString());
+    expect(firstThread.messages.length).toBeGreaterThan(0);
+
+    //Different ways to get recipients of the threads
+    let parentRecipients = firstThread.GetParentRecipients();
+   //expect(parentRecipients.length).toBeGreaterThan(0);
+    let childRecipients = firstThread.GetChildRecipients();
+    //expect(childRecipients.length).toBeGreaterThan(0);
+    let employeeRecipients = firstThread.GetEmployeeRecipients();
+    //expect(employeeRecipients.length).toBeGreaterThan(0);
+
+    //Deep examination of the attachment pulling logic, as getting pictures and files is a much needed feature
     threads.forEach(thread => {
         if (thread.AnyMessageHasAttachments()) {
 
@@ -249,7 +257,12 @@ test('Full Integration Test', async () => {
         }
     });
     
+    //Get the threads that are not "broadcast" threads, i.e. sent to fewer than 10 people
+    //Arguably, these threads are more "for us", rather than everyone
+    let nonBroadcastThreads = threads.filter(t => t.IsSentToFewPeople());
+    //no expect, because we can't know how many threads are "broadcast" or not
 
+    //Get the messages, without the context of the threads they appeared within
     let messages = await aulaClient.GetAulaMessages(MESSAGES_RETRIEVE_PAST_DAYS);
     
     if (messages.some(message => message.attachments.length > 0 )) {
@@ -317,7 +330,7 @@ test('Full Integration Test', async () => {
     expect(foundTeachers.length).toBeGreaterThan(0);
     expect(foundTeachers[0].name.indexOf(process.env.TEST_TEACHER_NAME!)).toBeGreaterThan(-1);
 
-    //Find preschool teachers in general by name
+    //Find preschool teachers (SFO) in general by name
     let foundPreschoolTeachers = await aulaClient.FindPreschoolTeachers(process.env.TEST_PRESCHOOL_TEACHER_NAME!);
     expect(foundPreschoolTeachers.length).toBeGreaterThan(0);
     expect(foundPreschoolTeachers[0].name.indexOf(process.env.TEST_PRESCHOOL_TEACHER_NAME!)).toBeGreaterThan(-1);

@@ -31,7 +31,7 @@ export class AulaClientConfig {
 /*
 * AulaClient is the main connector to communicate with Aula and retrieve information
 */
-export class AulaClient {
+export class AulaAPIClient {
 
   public SessionManager: UniloginSessionManager | null = null;
   private readonly DEFAULT_AULA_API_URL = 'https://www.aula.dk/api/'; //https://www.aula.dk/api/v21
@@ -386,14 +386,24 @@ export class AulaClient {
     //Get the threads, with all messages (including messages that are older than the retrievePastDays)
     let threads : AulaGetMessagesForThread[] = [];
     for (let threadId of threadIds) {
-        let getSingleThreadMethod = `messaging.getMessagesForThread&threadId=${threadId}&page=0`;
-        let threadMessagesWrapper = await this.callJsonApi<AulaGetMessagesForThread>(getSingleThreadMethod, AulaThreadMessagesSerializer.fromJSON);
+        let threadMessagesWrapper = await this.GetAulaThreadSingle(threadId);
         threads.push(threadMessagesWrapper);
     };
 
     return threads;
 
   }
+
+    /*
+  * Gets the specific thread by Id
+  * @param retrievePastDays - The thread Id
+  * @returns An array of threads, each containing at least one message within the last N days.
+  */
+    public async GetAulaThreadSingle(threadId : string) : Promise<AulaGetMessagesForThread> {
+        let getSingleThreadMethod = `messaging.getMessagesForThread&threadId=${threadId}&page=0`;
+        let threadMessagesWrapper = await this.callJsonApi<AulaGetMessagesForThread>(getSingleThreadMethod, AulaThreadMessagesSerializer.fromJSON);
+        return threadMessagesWrapper;
+    }
 
  
   /*

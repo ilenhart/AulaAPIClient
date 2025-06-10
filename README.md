@@ -1,4 +1,4 @@
-# AulaAPI
+# AulaAPIClient
 
 A wrapper around the Aula school portal, written in typescript. Written against the Danish version (Aula.dk).
 En wrapper omkring Aula skoleportalen, skrevet i TypeScript. Skrevet til den danske version (Aula.dk).
@@ -17,7 +17,7 @@ Key features:
 - Pulls almost 1:1 all data from Aula, allowing for your own filtering of important information
 - Does not write to Aula, send messages or similar
 
-Note: Aula API is currently on version 21 at the time of this writing and this client is written for that version.  If Aula updates (v22+), it is possible the methods will still work, but the data structures may change. Meaning, it probably would still work fine, but potentially could introduce errors if the data objects change.
+Note: The Aula API is currently on version 21 at the time of this writing and this client is written for that version.  If Aula updates (v22+), it is possible the methods will still work, but the data structures may change. Meaning, it probably would still work fine, but potentially could introduce errors if the data objects change.
 
 
 ![](./media/aula-logo.png)
@@ -56,7 +56,7 @@ Here is an example of logging in, getting the last 21 days of Posts, and then ge
     aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
     aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
     
-    let aulaClient = new AulaClient(aulaConfig);
+    let aulaClient = new AulaAPIClient(aulaConfig);
 
     //Optional function to get a valid sessionId, if already known.
     let getKnownAulaSessionId = async (): Promise<string> => {
@@ -91,7 +91,7 @@ Here is an example of logging in, getting the last 21 days of Posts, and then ge
 ````
 ### Aula Client and Methods
 
-There is a sample integration test using Jest (tests/defaultIntegration.test.ts) which demonstrates various possibilities and can be used as a reference.
+There is a sample integration test using Jest [./tests/defaultIntegration.test.ts] which demonstrates various possibilities and can be used as a reference.
 
 When logging into Aula, you may have multiple profiles, multiple children, and multiple institutions (schools, etc).  Aula -and therefore this client- only acts in the context of a given profile/child/institution combination.  So, for example, if you have multiple children, you must switch the active child in the client.  There is no "all children" or "all institutions" behavior in this client.
 
