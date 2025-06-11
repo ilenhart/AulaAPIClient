@@ -1,15 +1,8 @@
 import { AulaJsonResponseDataWrapper} from './AulaCommon';
 import { ProfilePicture } from './AulaProfilePicture';
-import { AulaMessage } from './AulaThreadMessages';
+import { AulaMailBoxOwner, AulaMessage, AulaMessageText } from './AulaThreadMessages';
 
-export class AulaMailBoxOwner {
-    profileId?: number;
-    portalRole?: string;
-    isDeactivated?: boolean;
-    mailBoxOwnerType?: string;
-    id?: number;
-    isDeleted?: boolean;
-}
+
 
 export class AulaCreator {
     mailBoxOwner: AulaMailBoxOwner;
@@ -18,9 +11,7 @@ export class AulaCreator {
     answerDirectlyName: string;
 }
 
-export class AulaMessageText {
-    html: string;
-}
+
 
 export class AulaLatestMessage {
     id: string;
@@ -35,7 +26,7 @@ export class AulaRegardingChild {
     displayName: string;
 }
 
-export class AulaRecipient {
+export class AulaThreadRecipient {
     lastReadMessageId?: string;
     lastReadTimestamp?: string;
     leaveTime?: string | null;
@@ -68,7 +59,7 @@ export class AulaThread {
     threadEntityLinkDto: AulaThreadEntityLinkDto;
     id: number;
     subject: string;
-    recipients: AulaRecipient[];
+    recipients: AulaThreadRecipient[];
     extraRecipientsCount: number;
     muted: boolean;
     marked: boolean;

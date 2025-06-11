@@ -1,14 +1,16 @@
 import { Attachment, FileAttachment, ImageAttachment } from "./AulaAttachment";
 import {  AulaJsonResponseDataWrapper } from "./AulaCommon";
 import { PortalRole } from "./AulaRecipients";
+import { AulaThreadEntityLinkDto } from "./AulaThreads";
 
 
 export class AulaMailBoxOwner {
-    profileId: number;
-    portalRole: string;
-    isDeactivated: boolean;
-    mailBoxOwnerType: string;
-    id: number;
+    profileId?: number;
+    portalRole?: string;
+    isDeactivated?: boolean;
+    mailBoxOwnerType?: string;
+    id?: number;
+    isDeleted?: boolean;
 }
 
 export class AulaSender {
@@ -83,11 +85,6 @@ export class AulaMessage {
         let attachments = this.GetFileAttachments();
         return attachments.map(attachment => attachment.GetFileUrl());
     }
-}
-
-export class AulaThreadEntityLinkDto {
-    entityId: string | null;
-    threadType: string;
 }
 
 export class AulaGetMessagesForThread {

@@ -296,8 +296,28 @@ test('Full Integration Test', async () => {
     
 
     //Pictures and gallery items
+    let ALBUM_LIMIT = 10;
+    let MEDIA_LIMIT = 30;
     let ALBUMS_RETRIEVE_PAST_DAYS = 7;
-    let albums = await aulaClient.GetGalleryAlbumMedia(ALBUMS_RETRIEVE_PAST_DAYS);
+    let ALBUMS_RETRIEVE_MOST_RECENT_ALBUMS = 5;
+    let albums = await aulaClient.GetGalleryAlbumMedia(ALBUM_LIMIT, MEDIA_LIMIT, 
+            ALBUMS_RETRIEVE_MOST_RECENT_ALBUMS, ALBUMS_RETRIEVE_PAST_DAYS);
+
+    albums.forEach(album => {
+        if (album.HasImages()){
+            let images = album.GetImages();
+            expect(images[0].GetFullSizeUrl().length).toBeGreaterThan(0);
+            expect(images[0].GetThumbnailUrl().length).toBeGreaterThan(0);
+            expect(images[0].GetLargeThumbnailUrl().length).toBeGreaterThan(0);
+        };
+    });
+
+    //There's always a default album for the current child.  Here we test to ensure we can get it, and it has images
+    let myChildAlbum = albums.find(album => album.IsDefaultMyChildAlbum);
+    expect(myChildAlbum).toBeDefined();
+    expect(myChildAlbum!.HasImages()).toBe(true);
+    expect(myChildAlbum!.GetImages().length).toBeGreaterThan(0);
+    expect(myChildAlbum!.GetImages()[0].HasChildNameTag(process.env.TEST_CHILD_NAME!)).toBe(true);
 
     //Meebook, which has some additional educational information
     let meeBook = await aulaClient.getMeeBookInformation();
@@ -345,5 +365,7 @@ test('Full Integration Test', async () => {
     let foundLeaders = await aulaClient.FindAnyLeaders(process.env.TEST_LEADER_NAME!);
     expect(foundLeaders.length).toBeGreaterThan(0);
     expect(foundLeaders[0].name.indexOf(process.env.TEST_LEADER_NAME!)).toBeGreaterThan(-1);
+    
+    console.log("Integration test complete");
     
 }, 600000);

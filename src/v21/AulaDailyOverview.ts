@@ -1,4 +1,5 @@
 import { AulaJsonResponseDataWrapper } from "./AulaCommon";
+import { InstitutionProfile } from "./AulaProfiles";
 
 // ProfilePicture interface for profile pictures
 interface ProfilePicture {
@@ -9,20 +10,7 @@ interface ProfilePicture {
     url: string;
 }
 
-// InstitutionProfile interface for daily overview institution profiles
-interface InstitutionProfile {
-    profileId: number;
-    id: number;
-    institutionCode: string;
-    institutionName: string;
-    role: string;
-    name: string;
-    profilePicture: ProfilePicture;
-    mainGroup: string | null;
-    shortName: string;
-    institutionRole: string;
-    metadata: string;
-}
+
 
 // MainGroup interface
 interface MainGroup {

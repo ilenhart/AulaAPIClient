@@ -1,5 +1,5 @@
 {
-  "name": "aulaapi",
+  "name": "aula-apiclient-ts",
   "version": "1.0.0",
   "description": "Aula API Typescript Wrapper",
   "main": "./dist/index.js",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ilenhart/AulaAPI.git"
+    "url": "git+https://github.com/ilenhart/AulaAPIClient.git"
   },
   "keywords": [
     "Aula"
@@ -22,9 +22,9 @@
   "author": "Isaac Lenhart",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ilenhart/AulaAPI/issues"
+    "url": "https://github.com/ilenhart/AulaAPIClient/issues"
   },
-  "homepage": "https://github.com/ilenhart/AulaAPI#readme",
+  "homepage": "https://github.com/ilenhart/AulaAPIClient#readme",
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "dotenv": "^16.5.0",

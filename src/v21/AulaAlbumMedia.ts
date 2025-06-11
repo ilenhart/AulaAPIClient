@@ -1,5 +1,5 @@
 
-import { AulaGroup } from './AulaGalleryAlbums';
+import { GalleryAlbum } from './AulaGalleryAlbums';
 import { AulaJsonResponseDataWrapper} from './AulaCommon';
 import { ProfilePicture } from './AulaProfilePicture';
 
@@ -65,21 +65,55 @@ export class AlbumMedia {
     mediumThumbnailUrl: string;
     smallThumbnailUrl: string;
     extraSmallThumbnailUrl: string;
+
+    /*
+    * Check if the media has a tag with the name part and role child.
+    * @param namePart - The part of the name to check for.
+    * @returns True if the media has a tag with the name part and role child, false otherwise.
+    */
+    public HasChildNameTag(namePart : string) : boolean {
+        if (!this.tags) return false;
+        let childNameTag = this.tags.find(tag => tag.name.toLowerCase().includes(namePart.toLowerCase()) && tag.role === "child");
+        return childNameTag !== undefined;
+    }
+
+    /*
+    * Get the url of the thumbnail image.  This is the smallest image available.
+    * The URL expires (it's from S3), so must be used quickly.
+    * @returns The url of the thumbnail image.
+    */
+    public GetThumbnailUrl() : string {
+        if (this.thumbnailUrl) {
+            return this.thumbnailUrl;
+        }
+        return "";
+    }
+
+    /*
+    * Get the url of the large thumbnail image.  This is the second smallest image available.
+    * The URL expires (it's from S3), so must be used quickly.
+    * @returns The url of the large thumbnail image.
+    */
+    public GetLargeThumbnailUrl() : string {
+        if (this.largeThumbnailUrl) {
+            return this.largeThumbnailUrl;
+        }
+        return "";
+    }
+
+    /*
+    * Get the url of the full size image.  This is the largest image available.
+    * The URL expires (it's from S3), so must be used quickly.
+    * @returns The url of the full size image.
+    */
+    public GetFullSizeUrl() : string {
+        if (this.file && this.file.url) {
+            return this.file.url;
+        }
+        return "";
+    }
 }
 
-export class GalleryAlbum {
-    id: number;
-    title: string;
-    description: string;
-    creator: MediaCreator;
-    creationDate: string;
-    sharedWithGroups: AulaGroup[];
-    thumbnailsUrls: string[];
-    regardingInstitutionProfileId: number | null;
-    currentUserCanEdit: boolean;
-    currentUserCanDelete: boolean;
-    currentUserCanAddMedia: boolean;
-}
 
 export class AulaAlbumMedia {
     
@@ -101,7 +135,23 @@ export class AulaAlbumMediaSerializer {
 
     static fromJSON(json: string): AulaAlbumMedia {
         const response = JSON.parse(json);
-        const responseObj = Object.assign(new AlbumMediaResponse(), response);
+        const responseObj = Object.assign(new AlbumMediaResponse(), response) as AlbumMediaResponse;
+
+        responseObj.data.results = responseObj.data.results.map((media : AlbumMedia) => {
+            media = Object.assign(new AlbumMedia(), media) as AlbumMedia;
+       
+            media.tags = media.tags.map((tag : Tag) => {
+                tag = Object.assign(new Tag(), tag) as Tag;
+                return tag;
+            });
+
+            media.creator = Object.assign(new MediaCreator(), media.creator) as MediaCreator;
+            media.file = Object.assign(new MediaFile(), media.file) as MediaFile;
+
+            return media
+        });
+
+
         return responseObj.data;
     }
 

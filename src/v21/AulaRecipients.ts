@@ -1,4 +1,5 @@
 import { AulaJsonPagedDataWrapper, AulaJsonResponseDataWrapper, AulaJsonResponsePagedResults } from "./AulaCommon";
+import { MainGroup } from "./AulaDailyOverview";
 
 
 export class AulaRecipient {
@@ -45,12 +46,7 @@ export class RelatedProfile {
     metadata : string;
 }
 
-export class MainGroup {
-    id : number;
-    name : string;
-    institutionCode : string;
-    institutionName : string;
-}
+
 
 export enum RelationType {
     Parent = "guardian",

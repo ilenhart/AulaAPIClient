@@ -12,7 +12,7 @@ import { AulaGalleryAlbumsSerializer, GalleryAlbum } from './v21/AulaGalleryAlbu
 import { AulaTokenSerializer } from './v21/AulaToken';
 import { MeeBookClient, MeeBookConsolidatedInformation } from './MeeBookClient';
 import { AulaCalendarEventTypes } from './v21/AulaCalendarEventTypes';
-
+import { AulaAlbumMedia, AulaAlbumMediaSerializer } from './v21/AulaAlbumMedia';
 
 
 
@@ -555,8 +555,11 @@ export class AulaAPIClient {
   * @returns An array of gallery albums.
   */
   public async GetGalleryAlbumMedia( 
-    retrievePastDays : number = 3, 
-    albumLimit: number = 12
+    albumLimit: number = 12,
+    mediaLimit: number = 30,
+    mostRecentAlbums? : number,
+    retrievePastDays? : number, 
+   
   ) : Promise<GalleryAlbum[]> {
 
     let institutionQueryString = this.getContextualInstitutionProfileIds().map(id => `institutionProfileIds[]=${id}`).join("&");
@@ -564,19 +567,60 @@ export class AulaAPIClient {
     const method = `gallery.getAlbums&index=0&limit=${albumLimit}&sortOn=mediaCreatedAt&orderDirection=desc&filterBy=all&${institutionQueryString}`;
     let albums = await this.callJsonApi<GalleryAlbum[]>(method, AulaGalleryAlbumsSerializer.fromJSON);
 
-    let end = new Date(Date.now());
-    let start = new Date(end.getTime() - (retrievePastDays * 24 * 60 * 60 * 1000));
+    //Sort
+    albums = albums.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
+
+    let getByDate = false;
+    if (retrievePastDays)  getByDate = true; 
+    if (mostRecentAlbums) getByDate = false;
 
     let returnAlbums : GalleryAlbum[] = [];
 
-    for (let album of albums) {
-      //Check if we should process this album
-      let albumDate = new Date(album.creationDate);
-      if (albumDate < start || albumDate > end) {
-        //The album is outside of the date range, so we skip it
-        continue;
-      }
-      returnAlbums.push(album);
+    if (getByDate) {
+        let end = new Date(Date.now());
+        let start = new Date(end.getTime() - (retrievePastDays! * 24 * 60 * 60 * 1000));
+    
+        for (let album of albums) {
+          //Check if we should process this album
+          let albumDate = new Date(album.creationDate);
+          if (albumDate < start || albumDate > end) {
+            //The album is outside of the date range, so we skip it
+            continue;
+          }
+          returnAlbums.push(album);
+        }
+    } else {
+        
+        //Not the my child album
+        returnAlbums = albums.filter(album => album.IsDefaultMyChildAlbum === false);
+        //Get the most recent
+        returnAlbums = returnAlbums.slice(0, mostRecentAlbums!);
+        //Add the default my child album back
+        returnAlbums.push(...albums.filter(album => album.IsDefaultMyChildAlbum));
+
+    }
+    
+
+    for (let album of returnAlbums) {
+
+
+        let albumScopeSignifier = "";
+        
+        if (album.IsDefaultMyChildAlbum) {
+            //Specific album generated dynamically by Aula
+            albumScopeSignifier = "userSpecificAlbum=true";
+            
+        } else {
+            //All other albums
+            albumScopeSignifier = `albumId=${album.id}`;
+            
+        }
+
+        const method = `gallery.getMedia&${albumScopeSignifier}&index=0&limit=${mediaLimit}&sortOn=uploadedAt&orderDirection=desc&filterBy=all&${institutionQueryString}`;
+        let aulaAlbumMedia = await this.callJsonApi<AulaAlbumMedia>(method, AulaAlbumMediaSerializer.fromJSON);
+
+        album.Media = aulaAlbumMedia.results;
+
     }
 
     return returnAlbums;
@@ -628,4 +672,5 @@ export class AulaAPIClient {
 }
 
 
+export * from './v21';
 
