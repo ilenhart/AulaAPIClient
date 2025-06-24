@@ -1,5 +1,5 @@
 import { AulaAPIClient, AulaClientConfig } from "../src";
-import { AulaPost } from "../src/v21/AulaPosts";
+import { AulaPost } from "../src/v22/AulaPosts";
 
 require('dotenv').config();
 
@@ -115,7 +115,7 @@ test('Full Integration Test', async () => {
     expect(aulaClient.LoggedIn).toBe(true);
     
     //Code is written for API version 21, so this is a sanity check
-    expect(aulaClient.ActiveAPIVersion).toBe(21);
+    expect(aulaClient.ActiveAPIVersion).toBe(22);
 
     //Check the functions we supplied were used
     expect(usedGetSessionId).toBe(true);

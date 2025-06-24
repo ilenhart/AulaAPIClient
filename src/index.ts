@@ -1,18 +1,18 @@
 import { URLSearchParams } from 'url';
 
-import { AulaProfiles, AulaProfilesSerializer, Child, InstitutionProfile, Profile } from './v21/AulaProfiles';
+import { AulaProfiles, AulaProfilesSerializer, Child, InstitutionProfile, Profile } from './v22/AulaProfiles';
 import { UniloginSessionManager } from './UniloginSessionManager';
-import { AulaDailyOverviewSerializer, DailyOverview } from './v21/AulaDailyOverview';
-import { AulaRecipient, AulaRecipientsSerializer, InstitutionRole, PortalRole } from './v21/AulaRecipients';
-import { AulaFindMessageMailboxParticipant, AulaFindMessageMessage, AulaFindMessageRequest, AulaFindMessageResult, AulaFindMessagesSerializer } from './v21/AulaFindMessage';
-import { AulaGetMessagesForThread, AulaThreadMessagesSerializer } from './v21/AulaThreadMessages';
-import { AulaPost, AulaPosts, AulaPostsSerializer } from './v21/AulaPosts';
-import { AulaCalendarEvent, AulaCalendarEventsSerializer} from './v21/AulaCalendarEvents';
-import { AulaGalleryAlbumsSerializer, GalleryAlbum } from './v21/AulaGalleryAlbums';
-import { AulaTokenSerializer } from './v21/AulaToken';
+import { AulaDailyOverviewSerializer, DailyOverview } from './v22/AulaDailyOverview';
+import { AulaRecipient, AulaRecipientsSerializer, InstitutionRole, PortalRole } from './v22/AulaRecipients';
+import { AulaFindMessageMailboxParticipant, AulaFindMessageMessage, AulaFindMessageRequest, AulaFindMessageResult, AulaFindMessagesSerializer } from './v22/AulaFindMessage';
+import { AulaGetMessagesForThread, AulaThreadMessagesSerializer } from './v22/AulaThreadMessages';
+import { AulaPost, AulaPosts, AulaPostsSerializer } from './v22/AulaPosts';
+import { AulaCalendarEvent, AulaCalendarEventsSerializer} from './v22/AulaCalendarEvents';
+import { AulaGalleryAlbumsSerializer, GalleryAlbum } from './v22/AulaGalleryAlbums';
+import { AulaTokenSerializer } from './v22/AulaToken';
 import { MeeBookClient, MeeBookConsolidatedInformation } from './MeeBookClient';
-import { AulaCalendarEventTypes } from './v21/AulaCalendarEventTypes';
-import { AulaAlbumMedia, AulaAlbumMediaSerializer } from './v21/AulaAlbumMedia';
+import { AulaCalendarEventTypes } from './v22/AulaCalendarEventTypes';
+import { AulaAlbumMedia, AulaAlbumMediaSerializer } from './v22/AulaAlbumMedia';
 
 
 
@@ -38,7 +38,7 @@ export class AulaAPIClient {
 
   //The API version we are expecting, for various serialized classes to have correct info
   //It could be higher (22, 23, etc) and could still work, just is a sanity check.
-  private readonly EXPECTED_AULA_API_VERSION = 21; 
+  private readonly EXPECTED_AULA_API_VERSION = 22; 
 
   private config : AulaClientConfig;
 
@@ -672,5 +672,5 @@ export class AulaAPIClient {
 }
 
 
-export * from './v21';
+export * from './v22';
 
