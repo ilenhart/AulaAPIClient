@@ -5,6 +5,18 @@ En wrapper omkring Aula skoleportalen, skrevet i TypeScript. Skrevet til den dan
 
 The code itself is non-Danish specific, but if there are other non-Danish Aula versions, the login flow or APIs might be different.
 
+## IMPORTANT NOTE: Unilogin changes make this project ineffective
+--------------------
+In August 2025, the Danish IT strategy changed Unilogin so that it is only applicable for students, no longer parents.  This means that the previous reliance on Unilogin for logging in and scraping no longer is viable, at least with parent credentials
+https://viden.stil.dk/spaces/OFFSKOLELOGIN/pages/104333383/Roadmap%2Bfor%2BUnilogin
+
+Because Aula doesn't have an actual API and it is difficult/impossible to use typescript to automatically login using MitID, this project is no longer viable.  
+
+It is possible that this could be used to login with Unlogin using the child login credentials, but it's unclear that most of the functionality would work effectively, and this has not yet been tested in any capacity, not to mention that using the child credentials is more unreliable and could cause problems.  Specifically, the child's credentials may not have the rights to see various things that this library expects to query.
+
+A different approach around this will be explored and other testing done, but for the time being, this project will not work and will be persisted as a relic of the way it used to work (and still might, using the child's credentials)
+--------------------
+
 Key features:
 - Login with Unilogin credentials
 - Pull all major data elements, including:
