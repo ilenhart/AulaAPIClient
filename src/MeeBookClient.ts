@@ -25,15 +25,14 @@ export class MeeBookClient {
         meeBookChildFilterCodes : string[], 
         meeBookInstitutionFilterIds : string[], 
         weeklyBookAuthorizationToken : string,
-        weeklyPlanAuthorizationToken : string,
-        parentId : string
+        weeklyPlanAuthorizationToken : string
     ) {
         this.MeeBookBaseUrl = `https://app.meebook.com/aulaapi/`;
         this.meeBookChildFilterCodes = meeBookChildFilterCodes;
         this.meeBookInstitutionFilterIds = meeBookInstitutionFilterIds;
         this.weeklyBookAuthorizationToken = weeklyBookAuthorizationToken;
         this.weeklyPlanAuthorizationToken = weeklyPlanAuthorizationToken;
-        this.parentId = parentId;
+        
 
         this.Session = axios.create();
         //this.Session.defaults.withCredentials = true;

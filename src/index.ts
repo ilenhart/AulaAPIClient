@@ -1,7 +1,6 @@
 import { URLSearchParams } from 'url';
 
 import { AulaProfiles, AulaProfilesSerializer, Child, InstitutionProfile, Profile } from './v22/AulaProfiles';
-import { UniloginSessionManager } from './UniloginSessionManager';
 import { AulaDailyOverviewSerializer, DailyOverview } from './v22/AulaDailyOverview';
 import { AulaRecipient, AulaRecipientsSerializer, InstitutionRole, PortalRole } from './v22/AulaRecipients';
 import { AulaFindMessageMailboxParticipant, AulaFindMessageMessage, AulaFindMessageRequest, AulaFindMessageResult, AulaFindMessagesSerializer } from './v22/AulaFindMessage';
@@ -13,19 +12,18 @@ import { AulaTokenSerializer } from './v22/AulaToken';
 import { MeeBookClient, MeeBookConsolidatedInformation } from './MeeBookClient';
 import { AulaCalendarEventTypes } from './v22/AulaCalendarEventTypes';
 import { AulaAlbumMedia, AulaAlbumMediaSerializer } from './v22/AulaAlbumMedia';
+import { ISessionIdProvider } from './ISessionIdProvider';
+import { AulaAPIConnector } from './AulaAPIConnector';
 
 
 
 /*
 * AulaClientConfig is a class that contains the configuration for the AulaClient.
-* @param aulaUserName - Aula Username
-* @param aulaPassword - Aula Password
 * @param aulaApiUrl - The URL of the Aula API, defaults to 'https://www.aula.dk/api/'
 */
 export class AulaClientConfig {
-  public aulaUserName : string ;
-  public aulaPassword : string ;
   public aulaApiUrl: string | undefined = undefined;
+  public sessionIdProvider : ISessionIdProvider;
 }
 
 /*
@@ -33,7 +31,8 @@ export class AulaClientConfig {
 */
 export class AulaAPIClient {
 
-  public SessionManager: UniloginSessionManager | null = null;
+  private AulaAPIConnector: AulaAPIConnector;  
+
   private readonly DEFAULT_AULA_API_URL = 'https://www.aula.dk/api/'; //https://www.aula.dk/api/v21
 
   //The API version we are expecting, for various serialized classes to have correct info
@@ -62,43 +61,19 @@ export class AulaAPIClient {
     if (this.config.aulaApiUrl === undefined) {
       this.config.aulaApiUrl = this.DEFAULT_AULA_API_URL;
     }
-    
+    this.AulaAPIConnector = new AulaAPIConnector(this.config.sessionIdProvider);
   }
 
   /*
-
-   Login logs the user in and sets up the session for further API calls.  As the login process jumps through a number of http call hoops and takes time, 
-   two callback function parameters can be provided to help cache and retrieve across login sessions
-
-   @param getKnownAulaSessionId - A function that can provide a known, active SesssionId.
-   @param setKnownAulaSessionId - A function that can persist the final found sessionId.
+   Login logs the user in and sets up the session for further API calls.  
   */
   public async Login(
-        getKnownAulaSessionId? : () => Promise<string>,  
-        setKnownAulaSessionId? : (aulaSessionId: string) => Promise<void>
     ): Promise<void> {
 
-    //Set up the session manager, largely just used for login purposes
-    this.SessionManager = new UniloginSessionManager(this.config.aulaUserName, this.config.aulaPassword);
+    //Initialize against the AulaAPI, using the given AulaAPIManager
+    await this.AulaAPIConnector.InitializeAPIUse(this.config.aulaApiUrl!);
 
-    //Follow the login flow and log in.  Session contains the relevant information
-    //Job of session is to recursively follow the login flow, and return the final sessionId
-    await this.SessionManager.ExecuteLogin(getKnownAulaSessionId, setKnownAulaSessionId);
-
-    //Initialize the API use, returns the version that should work
-    //this.config.aulaApiUrl = await this.SessionManager.InitializeAPIUse(this.config.aulaApiUrl!);
-
-    //Get the last known SessionId for the host we landed on at the end
-    this.FinalAulaSessionId = this.SessionManager.FinalAulaSessionId;
-    this.ActiveAPIVersion = this.SessionManager.ActiveAPIVersion;
-
-    if (this.EXPECTED_AULA_API_VERSION !== this.ActiveAPIVersion) {
-        console.warn(`API version mismatch.  Expected ${this.EXPECTED_AULA_API_VERSION}, got ${this.ActiveAPIVersion}.  This may cause issues or signify the API has changed.`);
-    }
-
-    if (setKnownAulaSessionId) {
-      await setKnownAulaSessionId(this.FinalAulaSessionId);
-    }
+    this.ActiveAPIVersion = this.AulaAPIConnector.ActiveAPIVersion;
 
     //Initialize the basic profile and children
     await this.setupInitialAulaData();
@@ -115,10 +90,11 @@ export class AulaAPIClient {
     params: URLSearchParams | undefined = undefined
   ) : Promise<T> {
 
-    let response = await this.SessionManager!.CallAulaAPI(aulaApiMethod, httpMethod, postData, params);
 
-    if (response.version !== this.SessionManager!.ActiveAPIVersion) {
-      console.warn(`API version mismatch.  Expected ${this.SessionManager!.ActiveAPIVersion}, got ${response.version}.  This may cause issues or signify the API has changed.`);
+    let response = await this.AulaAPIConnector!.CallAulaAPI(aulaApiMethod, httpMethod, postData, params);
+
+    if (response.version !== this.AulaAPIConnector!.ActiveAPIVersion) {
+      console.warn(`API version mismatch.  Expected ${this.AulaAPIConnector!.ActiveAPIVersion}, got ${response.version}.  This may cause issues or signify the API has changed.`);
     }
 
     let responseString = JSON.stringify(response);
@@ -646,7 +622,7 @@ export class AulaAPIClient {
 
     let childFilters : string[] = [this.CurrentChild.userId];
     let institutionFilters : string[] = [this.CurrentInstitution.institutionCode];
-    let parentId = this.config.aulaUserName;
+  
 
     let meebookWeeklyBookAuthorizationToken = await this.getMeebookAulaAuthorizationToken(MeeBookClient.WeeklyBookWidgetId);
     let meebookWeeklyPlanAuthorizationToken = await this.getMeebookAulaAuthorizationToken(MeeBookClient.WeeklyPlanWidgetId);
@@ -655,8 +631,7 @@ export class AulaAPIClient {
       childFilters,
       institutionFilters,
       meebookWeeklyBookAuthorizationToken,
-      meebookWeeklyPlanAuthorizationToken,
-      parentId
+      meebookWeeklyPlanAuthorizationToken
     );
 
     let meeBookWeekOverviewList = await meeBookClient.getWorkPlanForWeeks();

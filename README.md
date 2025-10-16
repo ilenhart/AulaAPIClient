@@ -5,20 +5,7 @@ En wrapper omkring Aula skoleportalen, skrevet i TypeScript. Skrevet til den dan
 
 The code itself is non-Danish specific, but if there are other non-Danish Aula versions, the login flow or APIs might be different.
 
-## IMPORTANT NOTE: Unilogin changes make this project ineffective
---------------------
-In August 2025, the Danish IT strategy changed Unilogin so that it is only applicable for students, no longer parents.  This means that the previous reliance on Unilogin for logging in and scraping no longer is viable, at least with parent credentials
-https://viden.stil.dk/spaces/OFFSKOLELOGIN/pages/104333383/Roadmap%2Bfor%2BUnilogin
-
-Because Aula doesn't have an actual API and it is difficult/impossible to use typescript to automatically login using MitID, this project is no longer viable.  
-
-It is possible that this could be used to login with Unlogin using the child login credentials, but it's unclear that most of the functionality would work effectively, and this has not yet been tested in any capacity, not to mention that using the child credentials is more unreliable and could cause problems.  Specifically, the child's credentials may not have the rights to see various things that this library expects to query.
-
-A different approach around this will be explored and other testing done, but for the time being, this project will not work and will be persisted as a relic of the way it used to work (and still might, using the child's credentials)
---------------------
-
 Key features:
-- Login with Unilogin credentials
 - Pull all major data elements, including:
     - Daily Overview
     - Threads and messages (within timeframe)
@@ -31,33 +18,26 @@ Key features:
 
 See the sample [integration tests](/tests/defaultIntegration.test.ts) for a fuller example of the various methods and usage.
 
-Note: The Aula API is currently on version 21 at the time of this writing and this client is written for that version.  If Aula updates (v22+), it is possible the methods will still work, but the data structures may change. Meaning, it probably would still work fine, but potentially could introduce errors if the data objects change.
+Note: The Aula API is currently on version 22 at the time of this writing and this client is written for that version.  If Aula updates (v23+), it is possible the methods will still work, but the data structures may change. Meaning, it probably would still work fine, but potentially could introduce errors if the data objects change.
 
 
 ![](./media/aula-logo.png)
 
 ## Login
 
-Login to Aula is typically done via MitId or similar.  This API requires login using the UniLogin username/password, which is separate, and more of a username/password access. 
+In August 2025, the Danish IT strategy changed Unilogin so only students can use it, not parents.  This means that parents must log into Aula using their MitID credentials, and because of this, the previous username/password route offered by Unilogin is no longer a viable way to access Aula for parents.
+https://viden.stil.dk/spaces/OFFSKOLELOGIN/pages/104333383/Roadmap%2Bfor%2BUnilogin
 
-![](./media/uni-login.png)
+However, when normally logging into Aula in your browser, you are exchanging MitID credentials for a cookie value that is sent to Aula on every subsequent API request. That cookie value is:
+PHPSESSID=abcdefghijklmop...  and you can see this cookie in your browser development tools for /api requests on Aula. In other words, as long as you have a valid PHPSESSID cookie value (acquired through a MitID signin), this can run autonomously from that point forward.
 
-If you do not already have a Unilogin username/password, you must set one up at
-https://www.aula.dk/portal/#/login
+The use of this library allows you to inject a function as part of the config that retrieves the value of a valid PHPSESSID cookie. That cookie value can be obtained by visiting Aula in your browser, then using the development tools to examine the request cookies on /api calls.  
 
-The username/password you create is used when instantiating the AulaClient.
+This cookie value (session) requires that you manage its validity outside this library.  At the last round of testing, (a) this session value is valid even after being idle for 6+ hours, and (b) the session value appears to be valid for more than 24 hours after creation.  
 
-## Example usage
+The upshot is that you should be able to: (a) login with MidID in your browser once, (b) retrieve the PHPSESSID cookie value using your dev tools, (c) persist/save that cookie to a safe and stateful location of your choice (environment, database, etc), (d) separately have an external automatic ping process that keeps the session "alive" and then (e) when using *this* library, pass a function (ISessionIDProvider.getKnownSessionId()) that retrieves the value from wherever you kept it.  
 
-To use, instantiate the client with your UniLogin username/password. The login process mimics the process followed when you are using the browser, so it follows a set of POSTS and re-directs.  It is written in a way that should be flexible enough to handle if Aula changes the login flow, but no guarantees.
-
-### Aula Session Management
-
-Normally, the set of login redirects/posts takes upwards of 8-15 seconds as it follows the HTTP flow of Unilogin.  The end result of this is a PHP sessionID used by Aula to verify the login.  Therefore, it is possible to shortcut this 8-15 second login process if you already know a valid PHP sessionId. 
-
-There are two optional callback functions to help with caching and persistence of this sessionId, which you might use to store the sessionID in a file, in memory, or a database.  Note that a sessionId will expire if not used within 60(?) minutes.
-
-If an invalid/expired sessionID is supplied, the client will try it anyway, and if it fails, will continue with the normal login process. If no sessionID is supplied, then the normal login process will proceed.  Therefore, if you are instantiating new Aula clients constantly within short periods, you probably want to implement this caching callback functionality.   If you are only doing it periodically, caching the sessionId is probably not necessary. 
+Because you must still authenticate with MitId in order to get this session ID value, this is not circumventing any security concerns.  This is essentially the same as logging on with MitID, and then keeping your browser open and refreshing it periodically.  A separate project may be introduced which simplifies the keep-alive session management, since that is not just a library to access Aula, but a running process.
 
 ### Example code
 
@@ -67,28 +47,16 @@ Here is an example of logging in, getting the last 21 days of Posts, and then ge
 
     const aulaConfig = new AulaClientConfig();
 
-    aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
-    aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
+   let sessionProvider : ISessionIdProvider = {
+        getKnownAulaSessionId: async function (): Promise<string> {
+            //GET THE SESSION ID FROM SOMEWHERE YOU ARE KEEPING IT ALIVE.  If the sessionID is expired on the aula side, this will fail
+        }
+    }
+    aulaConfig.sessionIdProvider = sessionProvider;
     
     let aulaClient = new AulaAPIClient(aulaConfig);
 
-    //Optional function to get a valid sessionId, if already known.
-    let getKnownAulaSessionId = async (): Promise<string> => {
-        //Your logic here to get the sessionId from some file/memory/db cache, if you want
-        return "";
-    };
-
-    //Optional function to save a valid sessionId, when login finds it.
-    let setKnownAulaSessionId = async (aulaSessionId: string): Promise<void> => {
-        //Your logic here to save the sessionId to some file/memory/db cache, if you want
-    };
-
-    //The get/set functions are optional.  By providing them, you can optionally 
-    //shortcut the login process, which is a tedious set of redirects that takes 10+ seconds
-    await aulaClient.Login(getKnownAulaSessionId, setKnownAulaSessionId);
-
-    //Or, alternately, use the client without session management:
-    //await aulaClient.Login();
+    await aulaClient.Login();
 
     //Get the last 21 days of Posts
     let POSTS_RETRIEVE_PAST_DAYS = 21;
@@ -110,6 +78,17 @@ There is a sample integration test using Jest: [integration tests](/tests/defaul
 When logging into Aula, you may have multiple profiles, multiple children, and multiple institutions (schools, etc).  Aula -and therefore this client- only acts in the context of a given profile/child/institution combination.  So, for example, if you have multiple children, you must switch the active child in the client.  There is no native "all children" or "all institutions" behavior in this client.
 
 ````javascript
+
+    const aulaConfig = new AulaClientConfig();
+
+   let sessionProvider : ISessionIdProvider = {
+        getKnownAulaSessionId: async function (): Promise<string> {
+            //GET THE SESSION ID FROM SOMEWHERE YOU ARE KEEPING IT ALIVE.  If the sessionID is expired on the aula side, this will fail
+        }
+    }
+    aulaConfig.sessionIdProvider = sessionProvider;
+    
+    let aulaClient = new AulaAPIClient(aulaConfig);
 
     await aulaClient.Login();
 
@@ -144,7 +123,18 @@ Note this is separate from a set of methods to find any child, teacher, parent, 
 
 ````javascript
 
-    await aulaClient.Login(getKnownAulaSessionId, setKnownAulaSessionId);
+    const aulaConfig = new AulaClientConfig();
+
+   let sessionProvider : ISessionIdProvider = {
+        getKnownAulaSessionId: async function (): Promise<string> {
+            //GET THE SESSION ID FROM SOMEWHERE YOU ARE KEEPING IT ALIVE.  If the sessionID is expired on the aula side, this will fail
+        }
+    }
+    aulaConfig.sessionIdProvider = sessionProvider;
+    
+    let aulaClient = new AulaAPIClient(aulaConfig);
+
+    await aulaClient.Login();
 
     //The first/default child will be set automatically
     //This is *your* default child, set at login

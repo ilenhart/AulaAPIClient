@@ -1,125 +1,32 @@
 import { AulaAPIClient, AulaClientConfig } from "../src";
+import { ISessionIdProvider } from "../src/ISessionIdProvider";
 import { AulaPost } from "../src/v22/AulaPosts";
 
 require('dotenv').config();
 
-test('Login Variations', async () => {
-
-    //In normal use, we would be saving this to a local file, memory or a database
-    //Sessions expire after 60(?) minutes, so also need a ttl or invalidation.
-    let setKnownAulaSessionId = async (aulaSessionId: string): Promise<void> => {
-        //We don't need this to do anything
-    };
-
-    const aulaConfig = new AulaClientConfig();
-
-    /*
-        Expects to pull these values from an .env file in the root.  See .env.default as a sample.  Copy it to .env and fill in the values.
-    */
-    aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
-    aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
-    
-
-    //Login with no sessionId
-    let aulaClient = new AulaAPIClient(aulaConfig);
-    await aulaClient.Login();
-    expect(aulaClient.LoggedIn).toBe(true);
-    let knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
-    let validSessionId = knownSessionId;
-    expect(knownSessionId).toBeDefined();
-
-
-    //Login with a known and valid sessionId
-    let getKnownAulaSessionId = async (): Promise<string> => {
-        return knownSessionId;
-    };
-    aulaClient = new AulaAPIClient(aulaConfig);
-    await aulaClient.Login(getKnownAulaSessionId, setKnownAulaSessionId);
-    expect(aulaClient.LoggedIn).toBe(true);
-    knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
-    expect(knownSessionId).toBeDefined();
-
-
-    //Login with an invalid sessionID (should recover and login anyway)
-    let getInvalidAulaSessionId = async (): Promise<string> => {
-        return "INVALID_SESSION_ID";
-    };
-    aulaClient = new AulaAPIClient(aulaConfig);
-    await aulaClient.Login(getInvalidAulaSessionId, setKnownAulaSessionId);
-    expect(aulaClient.LoggedIn).toBe(true);
-    knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
-    expect(knownSessionId).toBeDefined();
-
-
-    //Login with a blank sessionId (should recover and login anyway)
-    let getBlankAulaSessionId = async (): Promise<string> => {
-        return "";
-    };
-    aulaClient = new AulaAPIClient(aulaConfig);
-    await aulaClient.Login(getBlankAulaSessionId, setKnownAulaSessionId);
-    expect(aulaClient.LoggedIn).toBe(true);
-    knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
-    expect(knownSessionId).toBeDefined();
-
-
-    //Login with a known and valid sessionId, once more, as a double check
-    let getValidAulaSessionId = async (): Promise<string> => {
-        return validSessionId;
-    };
-    aulaClient = new AulaAPIClient(aulaConfig);
-    await aulaClient.Login(getValidAulaSessionId, setKnownAulaSessionId);
-    expect(aulaClient.LoggedIn).toBe(true);
-    knownSessionId = aulaClient.SessionManager?.FinalAulaSessionId!;
-    expect(knownSessionId).toBeDefined();
-
-
-}, 600000);
 
 test('Full Integration Test', async () => {
     
     const aulaConfig = new AulaClientConfig();
-
-    /*
-        Expects to pull these values from an .env file in the root.  See .env.default as a sample.  Copy it to .env and fill in the values.
-    */
-    aulaConfig.aulaUserName = process.env.AULA_USERNAME!;
-    aulaConfig.aulaPassword = process.env.AULA_PASSWORD!;
+    
+    let sessionProvider : ISessionIdProvider = {
+        getKnownAulaSessionId: async function (): Promise<string> {
+            return process.env.KNOWN_AULA_SESSION_ID!;
+        },
+        setKnownAulaSessionId: async function (aulaSessionId: string): Promise<void> {
+            //do nothing
+        }
+    }
+    aulaConfig.sessionIdProvider = sessionProvider;
     
     let aulaClient = new AulaAPIClient(aulaConfig);
 
-    let usedGetSessionId = false;
-    let usedSetSessionId = false;
-
-    //In normal use, we might be pulling this from a local file, memory, or a database.
-    //Sessions expire after 60(?) minutes, so also need a ttl or invalidation.
-    //In the code, if a session doesn't work, it should recover and try anyway
-    let getKnownAulaSessionId = async (): Promise<string> => {
-        console.log("Get a valid session ID from a cache, if present.");
-        usedGetSessionId = true;
-        if (process.env.KNOWN_AULA_SESSION_ID && process.env.KNOWN_AULA_SESSION_ID !== "" ) {
-            return process.env.KNOWN_AULA_SESSION_ID;
-        }
-        return ""; //Or return a valid sessionId if you have one.  Blank will be ignored and not used.
-
-    };
-
-    //In normal use, we would be saving this to a local file, memory or a database
-    //Sessions expire after 60(?) minutes, so also need a ttl or invalidation.
-    let setKnownAulaSessionId = async (aulaSessionId: string): Promise<void> => {
-        console.log(`Save the supplied sessionId to a cache for later. \nIf needed, add this as KNOWN_AULA_SESSION_ID in your .env file:\n${aulaSessionId}`);
-        usedSetSessionId = true;
-    };
-
-    await aulaClient.Login(getKnownAulaSessionId, setKnownAulaSessionId);
+    await aulaClient.Login();
 
     expect(aulaClient.LoggedIn).toBe(true);
     
-    //Code is written for API version 21, so this is a sanity check
+    //Code is written for API version 22, so this is a sanity check
     expect(aulaClient.ActiveAPIVersion).toBe(22);
-
-    //Check the functions we supplied were used
-    expect(usedGetSessionId).toBe(true);
-    expect(usedSetSessionId).toBe(true);
 
     //Check the default profile, child and institution were set based on the login
     expect(aulaClient.CurrentProfile).toBeDefined();
@@ -369,3 +276,93 @@ test('Full Integration Test', async () => {
     console.log("Integration test complete");
     
 }, 600000);
+
+
+//Integration test to test an existing session ID, and seeing how long it might be valid for
+//At last run:
+//   - A SessionID was still valid after being idle for 6+ hours (idle check)
+//   - A SessionID was still valid after being first used 26 hours previously (absolute timeout check)
+// So, it's thought that probably a sessionID can be pinged at least once every 6 hours to keep it alive, but it might be more.
+// Beyond 24 hours of testing this becomes a chore, so this is good enough for now.
+test('Timing Integration Test', async () => {
+    
+    const aulaConfig = new AulaClientConfig();
+
+    let sessionProvider : ISessionIdProvider = {
+        getKnownAulaSessionId: async function (): Promise<string> {
+            return process.env.KNOWN_AULA_SESSION_ID!;
+        },
+        setKnownAulaSessionId: async function (aulaSessionId: string): Promise<void> {
+            //do nothing
+        }
+    }
+    aulaConfig.sessionIdProvider = sessionProvider;
+    
+    let aulaClient = new AulaAPIClient(aulaConfig);
+
+    let processStartDate = new Date(Date.now());
+
+    console.log("Logging in for the initial time to test the key.")
+    //First, we login, using the existing key from the env file
+    await aulaClient.Login();
+    expect(aulaClient.LoggedIn).toBe(true);
+    expect(aulaClient.ActiveAPIVersion).toBe(22);
+
+    //Testing that this works at least once
+    console.log("Testing the getting child by name initially")
+    let profile = aulaClient.CurrentProfile;
+    let foundChild = profile.GetChildByName(process.env.TEST_CHILD_NAME!)!;
+    expect(foundChild.name.indexOf(process.env.TEST_CHILD_NAME!)).toBeGreaterThan(-1);
+        
+    async function sleep(sec:number): Promise<void> {
+        let ms = sec * 1000;
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    var encounteredAnError: boolean = false;
+
+    let initialSecondsToWaitBetweenReplies : number = 29 * 60; //minutes * seconds
+    let stepUpSecondsEachRetry = 30 * 60; //minutes * seconds
+
+    let currentSleepBetweenReplies = initialSecondsToWaitBetweenReplies;
+
+    while(!encounteredAnError) {
+        try 
+        {
+            console.log(`Pinging Aula....`)
+            let profile = aulaClient.CurrentProfile;
+            let foundChild = profile.GetChildByName(process.env.TEST_CHILD_NAME!)!;
+            expect(foundChild.name.indexOf(process.env.TEST_CHILD_NAME!)).toBeGreaterThan(-1);
+            //expect(foundChild.name).toBe("Jarlix")
+
+            let processEndDate = new Date(Date.now());
+            const diffMs = processEndDate.getTime() - processStartDate.getTime();   // difference in milliseconds
+            const diffMinutes = diffMs / (1000 * 60); 
+
+
+            console.log(`SUCCESS! ${diffMinutes} total minutes have elapsed so far since we started using this sessionID.`);
+            console.log(`Absolute timeout of this sessionID (if there is one) is at least ${diffMinutes} minutes`);
+            console.log(`The current loop of Session/idle timeout is at least ${currentSleepBetweenReplies/60} minutes`);
+
+            currentSleepBetweenReplies += stepUpSecondsEachRetry;
+            console.log(`Now sleeping ${currentSleepBetweenReplies / 60} minutes`)
+
+            await sleep(currentSleepBetweenReplies);
+
+            
+        }
+        catch (e) {
+            encounteredAnError = true;
+            console.error("Encounted error: " + e)
+        }
+    }
+
+    let processEndDate = new Date(Date.now());
+    const diffMs = processEndDate.getTime() - processStartDate.getTime();   // difference in milliseconds
+    const diffMinutes = diffMs / (1000 * 60); 
+
+    console.log(`${diffMinutes} elapsed before an error was thrown and/or the token timed out.`)
+    
+    console.log("Integration test complete");
+    
+}, 600000000);
