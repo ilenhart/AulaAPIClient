@@ -32,7 +32,7 @@ export class AulaAPIConnector {
 
         //Intercept all requests made to inject the right cookies for the given host
         this.Session.interceptors.request.use(async config => {
-            
+
 
             let host = new URL(config.url!).host;
 
@@ -54,7 +54,7 @@ export class AulaAPIConnector {
 
             if (this.cookieManager.HasEntries(host)) {
 
-                
+
                 if (host === "www.aula.dk") {
 
                     if (this.cookieManager.HasCookie(host, "profile_change")) {
@@ -64,7 +64,7 @@ export class AulaAPIConnector {
                         } else {
                             this.cookieManager.AddCookieValue(host, "profile_change", "10");
                         }
-                        
+
                     } else {
                         this.cookieManager.AddCookieValue(host, "profile_change", "10");
                     }
@@ -73,10 +73,25 @@ export class AulaAPIConnector {
                 let cookiesValue = this.cookieManager.GetAllCookiesString(host);
                 config.headers['Cookie'] = cookiesValue;
             }
-            
+
 
             return config;
         });
+
+        //Intercept all responses to detect and persist PHPSESSID rotation
+        this.Session.interceptors.response.use(
+            async (response) => {
+                await this.handlePHPSESSIDRotation(response);
+                return response;
+            },
+            async (error) => {
+                // Handle PHPSESSID rotation even on error responses
+                if (error.response) {
+                    await this.handlePHPSESSIDRotation(error.response);
+                }
+                throw error;
+            }
+        );
 
     }
 
@@ -193,6 +208,70 @@ export class AulaAPIConnector {
                 let responseData = response;
         
                 return responseData.data;
+            }
+
+            /**
+             * Handles PHPSESSID rotation by detecting when Aula returns a new PHPSESSID
+             * in the set-cookie header and persisting it via the sessionIdProvider
+             */
+            private async handlePHPSESSIDRotation(response: AxiosResponse): Promise<void> {
+                try {
+                    // Check if response has set-cookie headers
+                    const setCookieHeaders = response.headers['set-cookie'];
+                    if (!setCookieHeaders || !Array.isArray(setCookieHeaders)) {
+                        return;
+                    }
+
+                    // Extract PHPSESSID from set-cookie headers
+                    const newPHPSESSID = this.extractPHPSESSIDFromSetCookie(setCookieHeaders);
+                    if (!newPHPSESSID) {
+                        return;
+                    }
+
+                    // Get the host from the response
+                    const host = new URL(response.config.url!).host;
+
+                    // Get the current PHPSESSID from cookie manager
+                    const currentPHPSESSID = this.cookieManager.GetCookieValue(host, "PHPSESSID");
+
+                    // If the PHPSESSID has changed, persist the new value
+                    if (currentPHPSESSID && newPHPSESSID !== currentPHPSESSID) {
+                        log.info(`PHPSESSID rotation detected. Updating from ${currentPHPSESSID.substring(0, 10)}... to ${newPHPSESSID.substring(0, 10)}...`);
+
+                        // Update the session provider with the new PHPSESSID
+                        await this.sessionIdProvider.setKnownAulaSessionId(newPHPSESSID);
+
+                        // Update the cookie manager
+                        this.cookieManager.AddCookieHeaderArray(host, setCookieHeaders);
+                    } else if (!currentPHPSESSID) {
+                        // If we didn't have a PHPSESSID before, just update the cookie manager
+                        this.cookieManager.AddCookieHeaderArray(host, setCookieHeaders);
+                    }
+                } catch (error) {
+                    log.error(`Error handling PHPSESSID rotation: ${error}`);
+                }
+            }
+
+            /**
+             * Extracts the PHPSESSID value from an array of set-cookie headers
+             * @param setCookieHeaders Array of set-cookie header strings
+             * @returns The PHPSESSID value if found, undefined otherwise
+             */
+            private extractPHPSESSIDFromSetCookie(setCookieHeaders: string[]): string | undefined {
+                for (const cookieHeader of setCookieHeaders) {
+                    // Check if this cookie is PHPSESSID
+                    if (cookieHeader.startsWith('PHPSESSID=')) {
+                        // Extract the value (everything between = and the first ;)
+                        const equalIndex = cookieHeader.indexOf('=');
+                        let value = cookieHeader.substring(equalIndex + 1);
+                        const semicolonIndex = value.indexOf(';');
+                        if (semicolonIndex !== -1) {
+                            value = value.substring(0, semicolonIndex);
+                        }
+                        return value.trim();
+                    }
+                }
+                return undefined;
             }
 
             private dumpRequestResponseErrorDetails(error: AxiosError) : string {
