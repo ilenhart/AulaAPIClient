@@ -1,10 +1,51 @@
-/node_modules
+# Dependencies
+node_modules/
 
-# Ignore test-related files
-/coverage.data
-/coverage/
+# Build outputs
+dist/
+*.tsbuildinfo
+.tsup/
 
-# Build files
-/dist
-
+# Environment variables
 .env
+.env.local
+.env.*.local
+!.env.default
+
+# Testing
+coverage/
+coverage.data
+.jest-cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*~
+
+# IDE & Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Temporary files
+tmp/
+temp/
+*.tmp

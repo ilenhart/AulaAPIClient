@@ -143,6 +143,13 @@ export class AulaAPIClient {
   }
 
   /*
+    Does the most lightweight thing we can to test the API is currently active and working
+  */
+  public async PingAula() {
+    let root = await this.getProfilesByLogin();
+  }
+
+  /*
   * Gets the profile using the user's display name (i.e. the user's literal name)
   * @param displayNamePart  - Partial string of the user's name
   * @return The profile
@@ -648,4 +655,5 @@ export class AulaAPIClient {
 
 
 export * from './v22';
+export * from './ISessionIdProvider';
 

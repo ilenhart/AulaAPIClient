@@ -25,19 +25,127 @@ Note: The Aula API is currently on version 22 at the time of this writing and th
 
 ## Login
 
-In August 2025, the Danish IT strategy changed Unilogin so only students can use it, not parents.  This means that parents must log into Aula using their MitID credentials, and because of this, the previous username/password route offered by Unilogin is no longer a viable way to access Aula for parents.
+In August 2025, the Danish IT strategy changed Unilogin so only students can use it, not parents.  This means that parents must log into Aula using their MitID credentials.  The previous way this project worked was to log on with UniLogin credentials, but since this is no longer an option, that route is no longer possible. 
 https://viden.stil.dk/spaces/OFFSKOLELOGIN/pages/104333383/Roadmap%2Bfor%2BUnilogin
 
-However, when normally logging into Aula in your browser, you are exchanging MitID credentials for a cookie value that is sent to Aula on every subsequent API request. That cookie value is:
-PHPSESSID=abcdefghijklmop...  and you can see this cookie in your browser development tools for /api requests on Aula. In other words, as long as you have a valid PHPSESSID cookie value (acquired through a MitID signin), this can run autonomously from that point forward.
+Instead, this library project relies on being supplied with a valid PHPSESSID value, which can be retrieved from Aula once you have logged in with MitID.  From a security standpoint, this is not circumventing any behavior, you must still log in to Aula with a MitID as currently intended.
 
-The use of this library allows you to inject a function as part of the config that retrieves the value of a valid PHPSESSID cookie. That cookie value can be obtained by visiting Aula in your browser, then using the development tools to examine the request cookies on /api calls.  
+## Related Projects
 
-This cookie value (session) requires that you manage its validity outside this library.  At the last round of testing, (a) this session value is valid even after being idle for 6+ hours, and (b) the session value appears to be valid for more than 24 hours after creation.  
+This extension is part of a suite of three interconnected projects designed to work with the Aula.dk platform. Each project can be used independently, but together they form a complete solution for Aula session management, API interaction, and automation.
 
-The upshot is that you should be able to: (a) login with MidID in your browser once, (b) retrieve the PHPSESSID cookie value using your dev tools, (c) persist/save that cookie to a safe and stateful location of your choice (environment, database, etc), (d) separately have an external automatic ping process that keeps the session "alive" and then (e) when using *this* library, pass a function (ISessionIDProvider.getKnownSessionId()) that retrieves the value from wherever you kept it.  
+### 🔐 AulaLoginBrowserExtension 
 
-Because you must still authenticate with MitId in order to get this session ID value, this is not circumventing any security concerns.  This is essentially the same as logging on with MitID, and then keeping your browser open and refreshing it periodically.  A separate project may be introduced which simplifies the keep-alive session management, since that is not just a library to access Aula, but a running process.
+**Repository**: [github.com/ilenhart/AulaLoginBrowserExtension](https://github.com/ilenhart/AulaLoginBrowserExtension)
+
+**Purpose**: Chrome browser extension for capturing and storing Aula session IDs
+
+**What it does**:
+- Automatically detects and extracts your PHPSESSID from www.aula.dk
+- Provides a real-time view of your current session
+- Synchronizes session IDs with a backend persistence layer via REST API
+- Supports custom authentication for secure backend communication
+- Can work with any REST backend, or specifically with **AulaNewsletterTS** as a backend
+
+**Use this when**: You need to capture and persist your Aula session ID for use by other services or automation tools.
+
+---
+
+### 📡 AulaApiClient (This Project)
+
+**Repository**: [github.com/ilenhart/AulaAPIClient](https://github.com/ilenhart/AulaApiClient)
+
+**Purpose**: General-purpose API wrapper for the Aula platform
+
+**What it does**:
+- Provides a clean, typed interface for interacting with Aula.dk `/api` endpoints
+- Handles authentication using the PHPSESSID session ID
+- Wraps common Aula API operations (messages, calendars, profiles, etc.)
+- Can be integrated into any Node.js or TypeScript project
+
+**Use this when**: You need to programmatically interact with Aula's API from your own applications or scripts.
+
+---
+
+### 📰 AulaNewsletterTS 
+
+**Repository**: [github.com/ilenhart/AulaNewsletterTS](https://github.com/ilenhart/AulaNewsletterTS)
+
+**Purpose**: AWS-based automation platform for Aula with session persistence and AI-powered newsletters
+
+**What it does**:
+- Acts as a REST API backend for storing session IDs (compatible with this extension)
+- Periodically pings Aula to keep sessions alive  (similar to if you keep Aula open in your browser and occasionally refresh)
+- Pulls information from Aula using the **AulaApiClient** library
+- Generates AI-powered newsletters from Aula data
+- Sends automated email updates
+- Deployed as a serverless solution on AWS (Lambda, DynamoDB, SES)
+
+**Use this when**: You want a complete, turnkey solution for Aula automation, session management, and automated newsletters.
+
+---
+
+### How They Work Together
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Browser (www.aula.dk)                                      │
+│  ┌────────────────────────────────────┐                     │
+│  │  AulaLoginBrowserExtension         │                     │
+│  │  • Captures PHPSESSID              │                     │
+│  │  • Shows current session           │                     │
+│  └────────────────┬───────────────────┘                     │
+└───────────────────┼─────────────────────────────────────────┘
+                    │
+                    │ REST API (POST /session)
+                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│  AWS (AulaNewsletterTS)                                     │
+│  ┌────────────────────────────────────┐                     │
+│  │  • Stores session ID in DynamoDB   │                     │
+│  │  • Keeps session alive (pings)     │                     │
+│  │  • Uses AulaApiClient ────────┐    │                     │
+│  └────────────────────────────────┼────┘                    │
+└───────────────────────────────────┼─────────────────────────┘
+                                    │
+                                    │ Uses library
+                                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│  AulaApiClient                                              │
+│  ┌────────────────────────────────────┐                     │
+│  │  • Makes API calls to Aula.dk      │                     │
+│  │  • Fetches messages, calendar, etc │                     │
+│  │  • Returns structured data         │                     │
+│  └────────────────────────────────────┘                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Usage Scenarios
+
+**Scenario 1: Manual Session Management**
+- Use **AulaLoginBrowserExtension** alone to view and manually save your session ID to a simple backend of your choice
+
+**Scenario 2: Custom Integration**
+- Use **AulaLoginBrowserExtension** to capture sessions
+- Use **AulaApiClient** in your own application to interact with Aula
+- Build your own backend for session storage
+
+**Scenario 3: Complete Automation (Recommended)**
+- Deploy **AulaNewsletterTS** to AWS
+- Install **AulaLoginBrowserExtension** and configure it to use AulaNewsletterTS endpoints
+- Extension automatically keeps the backend session updated
+- **AulaNewsletterTS** uses **AulaApiClient** to pull data and generate newsletters
+- Fully automated Aula monitoring and notifications
+
+### Getting Started with the Full Stack
+
+1. **Deploy AulaNewsletterTS** to AWS (follow its README for deployment instructions)
+2. **Install this extension** (AulaLoginBrowserExtension) in Chrome
+3. **Configure the extension** to use your AulaNewsletterTS API endpoints
+4. **Log into Aula.dk** - the extension will automatically sync your session
+5. **AulaNewsletterTS** will handle the rest (keeping session alive, generating newsletters)
+
+Each project has its own detailed documentation in its respective repository.
 
 ### Example code
 

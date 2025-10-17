@@ -116,6 +116,10 @@ class AulaProfiles {
     public GetProfileByDisplayName(displayNamePart : string) : Profile | undefined {
         return this.profiles.find(profile => profile.displayName.indexOf(displayNamePart) > -1);
     }
+
+    public GetFirstProfile() : Profile {
+        return this.profiles[0];
+    }
 }
 
 class ProfilesResponse extends AulaJsonResponseDataWrapper<AulaProfiles> {
