@@ -191,7 +191,7 @@ export class AulaAPIClient {
   /*
   * Gets the institution, using a string partial of the institution name
   */
-  public GetMyInstitution(institutionNamePart : string) : InstitutionProfile | undefined {
+  public GetMyInstitution(institutionNamePart? : string) : InstitutionProfile | undefined {
     return this.CurrentProfile.GetInstitutionByName(institutionNamePart);
   }
 
@@ -213,8 +213,11 @@ export class AulaAPIClient {
     return await this.callJsonApi<DailyOverview[]>(method, AulaDailyOverviewSerializer.fromJSON);
   }
 
-  private async findAulaMailboxRecipients(namePart : string) : Promise<AulaRecipient[]> {
-    const method = `search.findRecipients&text=${namePart}&query=${namePart}&id=5091832&typeahead=true&limit=100&scopeEmployeesToInstitution=false&fromModule=messages&portalRoles[]=employee&portalRoles[]=child&portalRoles[]=guardian&docTypes[]=Profile&docTypes[]=CommonInbox`;
+  private async findAulaMailboxRecipients(namePart : string = "") : Promise<AulaRecipient[]> {
+
+    let institutionId = this.GetMyInstitution()?.id;
+
+    const method = `search.findRecipients&text=${namePart}&query=${namePart}&id=${institutionId}&typeahead=true&limit=100&scopeEmployeesToInstitution=false&fromModule=messages&portalRoles[]=employee&portalRoles[]=child&portalRoles[]=guardian&docTypes[]=Profile&docTypes[]=CommonInbox`;
     return await this.callJsonApi<AulaRecipient[]>(method, AulaRecipientsSerializer.fromJSON);
   }
 
@@ -223,7 +226,7 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-  public async FindAnyPeople(namePart : string) : Promise<AulaRecipient[]> {
+  public async FindAnyPeople(namePart? : string) : Promise<AulaRecipient[]> {
     return await this.findAulaMailboxRecipients(namePart);
   }
 
@@ -272,7 +275,7 @@ export class AulaAPIClient {
   * @param namePart - The name to search for. A partial string of the name to find.
   * @returns An array of recipients.
   */
-   public async FindAnyLeaders(namePart : string) : Promise<AulaRecipient[]> {
+   public async FindAnyLeaders(namePart? : string) : Promise<AulaRecipient[]> {
     let results = await this.FindAnyPeople(namePart);
     return results.filter(result => result.portalRole === PortalRole.Employee && result.institutionRole === InstitutionRole.Leader);
   }

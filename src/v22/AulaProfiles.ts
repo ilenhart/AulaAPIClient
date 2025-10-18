@@ -104,7 +104,7 @@ class Profile {
         return this.children.find(child => child.name.indexOf(childNamePart) > -1);
     }
 
-    public GetInstitutionByName(institutionNamePart : string) : InstitutionProfile | undefined {
+    public GetInstitutionByName(institutionNamePart : string = "") : InstitutionProfile | undefined {
         return this.institutionProfiles.find(institution => institution.institutionName.indexOf(institutionNamePart) > -1);
     }
 }
