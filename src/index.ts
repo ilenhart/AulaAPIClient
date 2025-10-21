@@ -659,4 +659,5 @@ export class AulaAPIClient {
 
 export * from './v22';
 export * from './ISessionIdProvider';
+export * from './AulaAPIErrors';
 

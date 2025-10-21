@@ -6,6 +6,7 @@ import { Dictionary } from "./Common";
 import * as cheerio from "cheerio";
 import { ClientRequest } from "http";
 import { ISessionIdProvider } from "./ISessionIdProvider";
+import { AulaAPIError, AulaInvalidSessionError } from "./AulaAPIErrors";
 
 export class AulaAPIConnector {
     
@@ -16,6 +17,8 @@ export class AulaAPIConnector {
     public ActiveAPIVersion : number = -1;
     public BaseApiUrl = "https://www.aula.dk/api/" //The base url of where the API should be found
     public VersionedApiUrl = "https://www.aula.dk/api/v21" //The full versioned API url, set later
+
+    private lastUsedSessionId : string;
 
     constructor (sessionIdProvider : ISessionIdProvider) {
 
@@ -49,6 +52,7 @@ export class AulaAPIConnector {
 
             if (!this.cookieManager.HasCookie(host, "PHPSESSID")) {
                 let sessionId = await this.sessionIdProvider.getKnownAulaSessionId();
+                this.lastUsedSessionId  = sessionId;
                 this.cookieManager.AddCookieValue(host, "PHPSESSID", sessionId);
             }
 
@@ -95,6 +99,52 @@ export class AulaAPIConnector {
 
     }
 
+    /**
+     * Centralized error handler for Aula API responses
+     * Inspects error responses and throws appropriate custom errors
+     * @param error The axios error to handle
+     * @param context Optional context string for better error messages
+     * @throws AulaInvalidSessionError if the session is invalid (403/448)
+     * @throws AulaAPIError for other known error patterns
+     */
+    private handleAulaErrorResponse(error: any, context?: string): void {
+        const httpStatus = error.response?.status;
+        const responseData = error.response?.data;
+
+        // Check for the specific 403/448 combination indicating invalid session
+        if (httpStatus === 403 && responseData?.status?.code === 448) {
+            const errorMessage = context
+                ? `Invalid or expired session while ${context}. ${responseData.status.message || ''}. [SessionId: ${this.lastUsedSessionId}] `.trim()
+                : undefined;
+
+            throw new AulaInvalidSessionError(errorMessage, {
+                httpStatus: httpStatus,
+                aulaStatusCode: responseData.status.code,
+                aulaSubCode: responseData.status.subCode,
+                aulaMessage: responseData.status.message,
+                aulaErrorInformation: responseData.status.errorInformation
+            });
+        }
+
+        // Check for the specific 403/XXX combination indicating invalid session
+        if (httpStatus === 403 && responseData?.status?.code) {
+            const errorMessage = context
+                ? `Invalid or expired session while ${context}. ${responseData.status.message || ''}. [Inner status code: ${responseData?.status?.code}]. [SessionId: ${this.lastUsedSessionId}] `.trim()
+                : undefined;
+
+            throw new AulaInvalidSessionError(errorMessage, {
+                httpStatus: httpStatus,
+                aulaStatusCode: responseData.status.code,
+                aulaSubCode: responseData.status.subCode,
+                aulaMessage: responseData.status.message,
+                aulaErrorInformation: responseData.status.errorInformation
+            });
+        }
+
+        // Can add other error patterns here in the future
+        // For now, we don't throw for other errors to preserve existing behavior
+    }
+
     public async InitializeAPIUse(baseApiUrl : string) : Promise<string> {
     
     
@@ -124,6 +174,9 @@ export class AulaAPIConnector {
                 }
                 catch (error : any)
                 {
+                    // Check for invalid session error (403/448) and throw descriptive error
+                    this.handleAulaErrorResponse(error, 'initializing API connection');
+
                     let responseStatus = error.response.status;
                     if (responseStatus === 410) {
                         //Do nothing. we have the wrong version
@@ -184,25 +237,28 @@ export class AulaAPIConnector {
                     }
                 }
                 catch (error : any) {
+                    // Check for invalid session error (403/448) and throw descriptive error
+                    this.handleAulaErrorResponse(error, `calling API method '${aulaMethod}'`);
+
                     if (error.status === 403) {
                         //Denied
                         //Parse out all relevent details from this request (headers, cookies, etc)
                         let errorDetails = this.dumpRequestResponseErrorDetails(error);
                         log.error(errorDetails);
-        
+
                         response = error.response;
                     } else if (error.status === 404) {
                         //Method not found
-        
+
                         //Parse out all relevent details from this request (headers, cookies, etc)
                         let errorDetails = this.dumpRequestResponseErrorDetails(error);
                         log.error(errorDetails);
-        
+
                         throw new Error(`Method not found: ${aulaMethod}.`);
                     } else {
                         throw new Error('API connection failed');
                     }
-                    
+
                 }
         
                 let responseData = response;
