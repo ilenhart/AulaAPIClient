@@ -9,14 +9,14 @@ import { ISessionIdProvider } from "./ISessionIdProvider";
 import { AulaAPIError, AulaInvalidSessionError } from "./AulaAPIErrors";
 
 export class AulaAPIConnector {
-    
+
     private Session: AxiosInstance | null = null;
     private cookieManager: CookieManager = new CookieManager();
     private sessionIdProvider : ISessionIdProvider;
 
-    public ActiveAPIVersion : number = -1;
+    public ActiveAPIVersion : number = 22;
     public BaseApiUrl = "https://www.aula.dk/api/" //The base url of where the API should be found
-    public VersionedApiUrl = "https://www.aula.dk/api/v21" //The full versioned API url, set later
+    public VersionedApiUrl = `https://www.aula.dk/api/v${this.ActiveAPIVersion}` //The full versioned API url, set later
 
     private lastUsedSessionId : string;
 
@@ -147,8 +147,10 @@ export class AulaAPIConnector {
 
     public async InitializeAPIUse(baseApiUrl : string) : Promise<string> {
     
-    
-            let apiVer = 22;
+
+            //We assume this.ActiveAPIVersion is the correct one, but may have been modified. 
+            //So, just in case, we use it, then increment as needed, with a warning
+            let tryApiVer = this.ActiveAPIVersion;
             let maxApiVersionTries = 5;
             let success = false;
     
@@ -166,7 +168,7 @@ export class AulaAPIConnector {
                 }
                 
                 // https://www.aula.dk/api/vXX
-                versionedApiUrl = `${baseApiUrl}v${apiVer}/`;
+                versionedApiUrl = `${baseApiUrl}v${tryApiVer}/`;
     
                 try
                 {
@@ -193,7 +195,7 @@ export class AulaAPIConnector {
                 
                 //Wrong version of the API, will increment
                 if (response!.status === 410 || response!.status === 403) {
-                    apiVer++;
+                    tryApiVer++;
                 } 
                 //Everything is fine, actually
                 else if (response!.status === 200) {
@@ -211,18 +213,18 @@ export class AulaAPIConnector {
             }
     
             this.VersionedApiUrl = versionedApiUrl;
-            this.ActiveAPIVersion = apiVer;
+            this.ActiveAPIVersion = tryApiVer;
             log.info(`API Usage verified.  API endpoint: ${this.VersionedApiUrl}`);
     
             return versionedApiUrl;
         }
 
          public async CallAulaAPI(aulaMethod: string, httpMethod: string = "get", postData: any = null,  params: URLSearchParams | undefined = undefined): Promise<any> {
-        
-                let url = this.BaseApiUrl + `?method=${aulaMethod}`;
+
+                let url = this.VersionedApiUrl + `?method=${aulaMethod}`;
                 if (params &&params.entries.length > 0)
                     url += `&${params.toString()}`;
-        
+
                 let response : AxiosResponse;
         
                 let headers : any ={"Accept": "application/json, text/plain, */*"};
