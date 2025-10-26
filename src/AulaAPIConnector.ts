@@ -189,7 +189,16 @@ export class AulaAPIConnector {
                         response = error.response;
                     }
                     else {
-                        throw new Error('API connection failed');
+                        //Something else happened, but we aren't sure what.
+                        const responseData = error.response?.data;
+
+                        throw new AulaInvalidSessionError(`Unexpected error in API Client calling the Aula API: ${error.message}`, {
+                            httpStatus: responseStatus,
+                            aulaStatusCode: responseData ? responseData?.status?.code : "No Aula Code.",
+                            aulaSubCode: responseData ? responseData?.status?.subCode : "No Aula Subcode",
+                            aulaMessage: responseData ? responseData?.status?.message : "No Aula Message",
+                            aulaErrorInformation: responseData ? responseData?.status?.errorInformation : error.response
+                        });
                     }
                 }
                 
@@ -208,7 +217,15 @@ export class AulaAPIConnector {
                 } 
                 //Something else is wrong
                 else {
-                    throw new Error('API connection failed');
+                    let responseStatus = response!.status;
+                    let responseData = response!.data;
+                    throw new AulaInvalidSessionError("Unexpected error in API Client calling the Aula API, on subsequent initial success", {
+                        httpStatus: responseStatus,
+                        aulaStatusCode: responseData ? responseData?.status?.code : "No Aula Code.",
+                        aulaSubCode: responseData ? responseData?.status?.subCode : "No Aula Subcode",
+                        aulaMessage: responseData ? responseData?.status?.message : "No Aula Message",
+                        aulaErrorInformation: responseData ? responseData?.status?.errorInformation : "Error is unknown.  Response status was not 410 or 403, yet we did not receive an error."
+                    });
                 }
             }
     
